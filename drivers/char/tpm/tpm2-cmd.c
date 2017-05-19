@@ -15,87 +15,9 @@
  * of the License.
  */
 
-#include "tpm.h"
+#include "tpm2.h"
 #include <crypto/hash_info.h>
 #include <keys/trusted-type.h>
-
-enum tpm2_object_attributes {
-	TPM2_OA_USER_WITH_AUTH		= BIT(6),
-};
-
-enum tpm2_session_attributes {
-	TPM2_SA_CONTINUE_SESSION	= BIT(0),
-};
-
-struct tpm2_startup_in {
-	__be16	startup_type;
-} __packed;
-
-struct tpm2_self_test_in {
-	u8	full_test;
-} __packed;
-
-struct tpm2_pcr_read_in {
-	__be32	pcr_selects_cnt;
-	__be16	hash_alg;
-	u8	pcr_select_size;
-	u8	pcr_select[TPM2_PCR_SELECT_MIN];
-} __packed;
-
-struct tpm2_pcr_read_out {
-	__be32	update_cnt;
-	__be32	pcr_selects_cnt;
-	__be16	hash_alg;
-	u8	pcr_select_size;
-	u8	pcr_select[TPM2_PCR_SELECT_MIN];
-	__be32	digests_cnt;
-	__be16	digest_size;
-	u8	digest[TPM_DIGEST_SIZE];
-} __packed;
-
-struct tpm2_get_tpm_pt_in {
-	__be32	cap_id;
-	__be32	property_id;
-	__be32	property_cnt;
-} __packed;
-
-struct tpm2_get_tpm_pt_out {
-	u8	more_data;
-	__be32	subcap_id;
-	__be32	property_cnt;
-	__be32	property_id;
-	__be32	value;
-} __packed;
-
-struct tpm2_get_random_in {
-	__be16	size;
-} __packed;
-
-struct tpm2_get_random_out {
-	__be16	size;
-	u8	buffer[TPM_MAX_RNG_DATA];
-} __packed;
-
-union tpm2_cmd_params {
-	struct	tpm2_startup_in		startup_in;
-	struct	tpm2_self_test_in	selftest_in;
-	struct	tpm2_pcr_read_in	pcrread_in;
-	struct	tpm2_pcr_read_out	pcrread_out;
-	struct	tpm2_get_tpm_pt_in	get_tpm_pt_in;
-	struct	tpm2_get_tpm_pt_out	get_tpm_pt_out;
-	struct	tpm2_get_random_in	getrandom_in;
-	struct	tpm2_get_random_out	getrandom_out;
-};
-
-struct tpm2_cmd {
-	tpm_cmd_header		header;
-	union tpm2_cmd_params	params;
-} __packed;
-
-struct tpm2_hash {
-	unsigned int crypto_id;
-	unsigned int tpm_id;
-};
 
 static struct tpm2_hash tpm2_hash_map[] = {
 	{HASH_ALGO_SHA1, TPM2_ALG_SHA1},
@@ -306,9 +228,11 @@ int tpm2_pcr_extend(struct tpm_chip *chip, int pcr_idx, u32 count,
 	if (count > ARRAY_SIZE(chip->active_banks))
 		return -EINVAL;
 
-	rc = tpm_buf_init(&buf, TPM2_ST_SESSIONS, TPM2_CC_PCR_EXTEND);
+	rc = tpm_buf_init(&buf);
 	if (rc)
 		return rc;
+
+	tpm_buf_init_req(&buf, TPM2_ST_SESSIONS, TPM2_CC_PCR_EXTEND);
 
 	tpm_buf_append_u32(&buf, pcr_idx);
 
@@ -477,9 +401,11 @@ int tpm2_seal_trusted(struct tpm_chip *chip,
 	if (i == ARRAY_SIZE(tpm2_hash_map))
 		return -EINVAL;
 
-	rc = tpm_buf_init(&buf, TPM2_ST_SESSIONS, TPM2_CC_CREATE);
+	rc = tpm_buf_init(&buf);
 	if (rc)
 		return rc;
+
+	tpm_buf_init_req(&buf, TPM2_ST_SESSIONS, TPM2_CC_CREATE);
 
 	tpm_buf_append_u32(&buf, options->keyhandle);
 	tpm2_buf_append_auth(&buf, TPM2_RS_PW,
@@ -594,9 +520,11 @@ static int tpm2_load_cmd(struct tpm_chip *chip,
 	if (blob_len > payload->blob_len)
 		return -E2BIG;
 
-	rc = tpm_buf_init(&buf, TPM2_ST_SESSIONS, TPM2_CC_LOAD);
+	rc = tpm_buf_init(&buf);
 	if (rc)
 		return rc;
+
+	tpm_buf_init_req(&buf, TPM2_ST_SESSIONS, TPM2_CC_LOAD);
 
 	tpm_buf_append_u32(&buf, options->keyhandle);
 	tpm2_buf_append_auth(&buf, TPM2_RS_PW,
@@ -642,12 +570,14 @@ static void tpm2_flush_context_cmd(struct tpm_chip *chip, u32 handle,
 	struct tpm_buf buf;
 	int rc;
 
-	rc = tpm_buf_init(&buf, TPM2_ST_NO_SESSIONS, TPM2_CC_FLUSH_CONTEXT);
+	rc = tpm_buf_init(&buf);
 	if (rc) {
 		dev_warn(&chip->dev, "0x%08x was not flushed, out of memory\n",
 			 handle);
 		return;
 	}
+
+	tpm_buf_init_req(&buf, TPM2_ST_NO_SESSIONS, TPM2_CC_FLUSH_CONTEXT);
 
 	tpm_buf_append_u32(&buf, handle);
 
@@ -684,9 +614,11 @@ static int tpm2_unseal_cmd(struct tpm_chip *chip,
 	int rc;
 	u32 rlength;
 
-	rc = tpm_buf_init(&buf, TPM2_ST_SESSIONS, TPM2_CC_UNSEAL);
+	rc = tpm_buf_init(&buf);
 	if (rc)
 		return rc;
+
+	tpm_buf_init_req(&buf, TPM2_ST_SESSIONS, TPM2_CC_UNSEAL);
 
 	tpm_buf_append_u32(&buf, blob_handle);
 	tpm2_buf_append_auth(&buf,
@@ -997,12 +929,6 @@ int tpm2_probe(struct tpm_chip *chip)
 }
 EXPORT_SYMBOL_GPL(tpm2_probe);
 
-struct tpm2_pcr_selection {
-	__be16  hash_alg;
-	u8  size_of_select;
-	u8  pcr_select[3];
-} __packed;
-
 static ssize_t tpm2_get_pcr_allocation(struct tpm_chip *chip)
 {
 	struct tpm2_pcr_selection pcr_selection;
@@ -1016,9 +942,11 @@ static ssize_t tpm2_get_pcr_allocation(struct tpm_chip *chip)
 	int rc;
 	int i = 0;
 
-	rc = tpm_buf_init(&buf, TPM2_ST_NO_SESSIONS, TPM2_CC_GET_CAPABILITY);
+	rc = tpm_buf_init(&buf);
 	if (rc)
 		return rc;
+
+	tpm_buf_init_req(&buf, TPM2_ST_NO_SESSIONS, TPM2_CC_GET_CAPABILITY);
 
 	tpm_buf_append_u32(&buf, TPM2_CAP_PCRS);
 	tpm_buf_append_u32(&buf, 0);
@@ -1031,7 +959,6 @@ static ssize_t tpm2_get_pcr_allocation(struct tpm_chip *chip)
 
 	count = be32_to_cpup(
 		(__be32 *)&buf.data[TPM_HEADER_SIZE + 5]);
-
 	if (count > ARRAY_SIZE(chip->active_banks)) {
 		rc = -ENODEV;
 		goto out;
@@ -1044,7 +971,7 @@ static ssize_t tpm2_get_pcr_allocation(struct tpm_chip *chip)
 
 	for (i = 0; i < count; i++) {
 		pcr_select_offset = marker +
-			offsetof(struct tpm2_pcr_selection, size_of_select);
+			offsetof(struct tpm2_pcr_selection, pcr_select_size);
 		if (pcr_select_offset >= end) {
 			rc = -EFAULT;
 			break;
@@ -1053,8 +980,8 @@ static ssize_t tpm2_get_pcr_allocation(struct tpm_chip *chip)
 		memcpy(&pcr_selection, marker, sizeof(pcr_selection));
 		chip->active_banks[i] = be16_to_cpu(pcr_selection.hash_alg);
 		sizeof_pcr_selection = sizeof(pcr_selection.hash_alg) +
-			sizeof(pcr_selection.size_of_select) +
-			pcr_selection.size_of_select;
+			sizeof(pcr_selection.pcr_select_size) +
+			pcr_selection.pcr_select_size;
 		marker = marker + sizeof_pcr_selection;
 	}
 

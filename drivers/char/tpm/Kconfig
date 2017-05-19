@@ -153,5 +153,6 @@ config TCG_VTPM_PROXY
 	  can receive commands.
 
 
+source "drivers/char/tpm/ktpm/Kconfig"
 source "drivers/char/tpm/st33zp24/Kconfig"
 endif # TCG_TPM

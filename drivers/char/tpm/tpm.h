@@ -81,6 +81,7 @@ enum tpm2_const {
 	TPM2_DURATION_SHORT	= 20,
 	TPM2_DURATION_MEDIUM	= 750,
 	TPM2_DURATION_LONG	= 2000,
+	TPM2_DIGEST_SIZE_MAX	= SHA512_DIGEST_SIZE,
 };
 
 enum tpm2_structures {
@@ -89,10 +90,132 @@ enum tpm2_structures {
 };
 
 enum tpm2_return_codes {
-	TPM2_RC_HASH		= 0x0083, /* RC_FMT1 */
-	TPM2_RC_INITIALIZE	= 0x0100, /* RC_VER1 */
-	TPM2_RC_DISABLED	= 0x0120,
-	TPM2_RC_TESTING		= 0x090A, /* RC_WARN */
+	TPM2_RC_SUCCESS		= 0x000,
+	/* defined for compatibility with TPM 1.2 */
+	TPM2_RC_BAD_TAG		= 0x01e,
+	/* Format 0 response codes */
+	TPM2_RC_VER1		= 0x100,
+	TPM2_RC_INITIALIZE	= (TPM2_RC_VER1 + 0x00),
+	TPM2_RC_FAILURE		= (TPM2_RC_VER1 + 0x01),
+	TPM2_RC_SEQUENCE	= (TPM2_RC_VER1 + 0x03),
+	TPM2_RC_PRIVATE		= (TPM2_RC_VER1 + 0x0b),
+	TPM2_RC_HMAC		= (TPM2_RC_VER1 + 0x19),
+	TPM2_RC_DISABLED	= (TPM2_RC_VER1 + 0x20),
+	TPM2_RC_EXCLUSIVE	= (TPM2_RC_VER1 + 0x21),
+	TPM2_RC_AUTH_TYPE	= (TPM2_RC_VER1 + 0x24),
+	TPM2_RC_AUTH_MISSING	= (TPM2_RC_VER1 + 0x25),
+	TPM2_RC_POLICY		= (TPM2_RC_VER1 + 0x26),
+	TPM2_RC_PCR		= (TPM2_RC_VER1 + 0x27),
+	TPM2_RC_PCR_CHANGED	= (TPM2_RC_VER1 + 0x28),
+	TPM2_RC_UPGRADE		= (TPM2_RC_VER1 + 0x2d),
+	TPM2_RC_TOO_MANY_CONTEXTS = (TPM2_RC_VER1 + 0x2e),
+	TPM2_RC_AUTH_UNAVAILABLE = (TPM2_RC_VER1 + 0x2f),
+	TPM2_RC_REBOOT		= (TPM2_RC_VER1 + 0x30),
+	TPM2_RC_UNBALANCED	= (TPM2_RC_VER1 + 0x31),
+	TPM2_RC_COMMAND_SIZE	= (TPM2_RC_VER1 + 0x42),
+	TPM2_RC_COMMAND_CODE	= (TPM2_RC_VER1 + 0x43),
+	TPM2_RC_AUTHSIZE	= (TPM2_RC_VER1 + 0x44),
+	TPM2_RC_AUTH_CONTEXT	= (TPM2_RC_VER1 + 0x45),
+	TPM2_RC_NV_RANGE	= (TPM2_RC_VER1 + 0x46),
+	TPM2_RC_NV_SIZE		= (TPM2_RC_VER1 + 0x47),
+	TPM2_RC_NV_LOCKED	= (TPM2_RC_VER1 + 0x48),
+	TPM2_RC_NV_AUTHORIZATION = (TPM2_RC_VER1 + 0x49),
+	TPM2_RC_NV_UNINITIALIZED = (TPM2_RC_VER1 + 0x4a),
+	TPM2_RC_NV_SPACE	= (TPM2_RC_VER1 + 0x4b),
+	TPM2_RC_NV_DEFINED	= (TPM2_RC_VER1 + 0x4c),
+	TPM2_RC_BAD_CONTEXT	= (TPM2_RC_VER1 + 0x50),
+	TPM2_RC_CPHASH		= (TPM2_RC_VER1 + 0x51),
+	TPM2_RC_PARENT		= (TPM2_RC_VER1 + 0x52),
+	TPM2_RC_NEEDS_TEST	= (TPM2_RC_VER1 + 0x53),
+	TPM2_RC_NO_RESULT	= (TPM2_RC_VER1 + 0x54),
+	TPM2_RC_SENSITIVE	= (TPM2_RC_VER1 + 0x55),
+	TPM2_MAX_FM0		= (TPM2_RC_VER1 + 0x7f),
+	/* Format 1 response codes */
+	TPM2_RC_FMT1		= 0x080,
+	TPM2_RC_ASYMMETRIC	= (TPM2_RC_FMT1 + 0x01),
+	TPM2_RC_ATTRIBUTES	= (TPM2_RC_FMT1 + 0x02),
+	TPM2_RC_HASH		= (TPM2_RC_FMT1 + 0x03),
+	TPM2_RC_VALUE		= (TPM2_RC_FMT1 + 0x04),
+	TPM2_RC_HIERARCHY	= (TPM2_RC_FMT1 + 0x05),
+	TPM2_RC_KEY_SIZE	= (TPM2_RC_FMT1 + 0x07),
+	TPM2_RC_MGF		= (TPM2_RC_FMT1 + 0x08),
+	TPM2_RC_MODE		= (TPM2_RC_FMT1 + 0x09),
+	TPM2_RC_TYPE		= (TPM2_RC_FMT1 + 0x0a),
+	TPM2_RC_HANDLE		= (TPM2_RC_FMT1 + 0x0b),
+	TPM2_RC_KDF		= (TPM2_RC_FMT1 + 0x0c),
+	TPM2_RC_RANGE		= (TPM2_RC_FMT1 + 0x0d),
+	TPM2_RC_AUTH_FAIL	= (TPM2_RC_FMT1 + 0x0e),
+	TPM2_RC_NONCE		= (TPM2_RC_FMT1 + 0x0f),
+	TPM2_RC_PP		= (TPM2_RC_FMT1 + 0x10),
+	TPM2_RC_SCHEME		= (TPM2_RC_FMT1 + 0x12),
+	TPM2_RC_SIZE		= (TPM2_RC_FMT1 + 0x15),
+	TPM2_RC_SYMMETRIC	= (TPM2_RC_FMT1 + 0x16),
+	TPM2_RC_TAG		= (TPM2_RC_FMT1 + 0x17),
+	TPM2_RC_SELECTOR	= (TPM2_RC_FMT1 + 0x18),
+	TPM2_RC_INSUFFICIENT	= (TPM2_RC_FMT1 + 0x1a),
+	TPM2_RC_SIGNATURE	= (TPM2_RC_FMT1 + 0x1b),
+	TPM2_RC_KEY		= (TPM2_RC_FMT1 + 0x1c),
+	TPM2_RC_POLICY_FAIL	= (TPM2_RC_FMT1 + 0x1d),
+	TPM2_RC_INTEGRITY	= (TPM2_RC_FMT1 + 0x1f),
+	TPM2_RC_TICKET		= (TPM2_RC_FMT1 + 0x20),
+	TPM2_RC_RESERVED_BITS	= (TPM2_RC_FMT1 + 0x21),
+	TPM2_RC_BAD_AUTH	= (TPM2_RC_FMT1 + 0x22),
+	TPM2_RC_EXPIRED		= (TPM2_RC_FMT1 + 0x23),
+	TPM2_RC_POLICY_CC	= (TPM2_RC_FMT1 + 0x24),
+	TPM2_RC_BINDING		= (TPM2_RC_FMT1 + 0x25),
+	TPM2_RC_CURVE		= (TPM2_RC_FMT1 + 0x26),
+	TPM2_RC_ECC_POINT	= (TPM2_RC_FMT1 + 0x27),
+	/* Warning response codes */
+	TPM2_RC_WARN		= 0x900,
+	TPM2_RC_CONTEXT_GAP	= (TPM2_RC_WARN + 0x01),
+	TPM2_RC_OBJECT_MEMORY	= (TPM2_RC_WARN + 0x02),
+	TPM2_RC_SESSION_MEMORY	= (TPM2_RC_WARN + 0x03),
+	TPM2_RC_MEMORY		= (TPM2_RC_WARN + 0x04),
+	TPM2_RC_SESSION_HANDLES	= (TPM2_RC_WARN + 0x05),
+	TPM2_RC_OBJECT_HANDLES	= (TPM2_RC_WARN + 0x06),
+	TPM2_RC_LOCALITY	= (TPM2_RC_WARN + 0x07),
+	TPM2_RC_YIELDED		= (TPM2_RC_WARN + 0x08),
+	TPM2_RC_CANCELED	= (TPM2_RC_WARN + 0x09),
+	TPM2_RC_TESTING		= (TPM2_RC_WARN + 0x0a),
+	TPM2_RC_REFERENCE_H0	= (TPM2_RC_WARN + 0x10),
+	TPM2_RC_REFERENCE_H1	= (TPM2_RC_WARN + 0x11),
+	TPM2_RC_REFERENCE_H2	= (TPM2_RC_WARN + 0x12),
+	TPM2_RC_REFERENCE_H3	= (TPM2_RC_WARN + 0x13),
+	TPM2_RC_REFERENCE_H4	= (TPM2_RC_WARN + 0x14),
+	TPM2_RC_REFERENCE_H5	= (TPM2_RC_WARN + 0x15),
+	TPM2_RC_REFERENCE_H6	= (TPM2_RC_WARN + 0x16),
+	TPM2_RC_REFERENCE_S0	= (TPM2_RC_WARN + 0x18),
+	TPM2_RC_REFERENCE_S1	= (TPM2_RC_WARN + 0x19),
+	TPM2_RC_REFERENCE_S2	= (TPM2_RC_WARN + 0x1a),
+	TPM2_RC_REFERENCE_S3	= (TPM2_RC_WARN + 0x1b),
+	TPM2_RC_REFERENCE_S4	= (TPM2_RC_WARN + 0x1c),
+	TPM2_RC_REFERENCE_S5	= (TPM2_RC_WARN + 0x1d),
+	TPM2_RC_REFERENCE_S6	= (TPM2_RC_WARN + 0x1e),
+	TPM2_RC_NV_RATE		= (TPM2_RC_WARN + 0x20),
+	TPM2_RC_LOCKOUT		= (TPM2_RC_WARN + 0x21),
+	TPM2_RC_RETRY		= (TPM2_RC_WARN + 0x22),
+	TPM2_RC_NV_UNAVAILABLE	= (TPM2_RC_WARN + 0x23),
+	TPM2_RC_NOT_USED	= (TPM2_RC_WARN + 0x7f),
+	/* Additional Defines */
+	TPM2_RC_H		= 0x000,
+	TPM2_RC_P		= 0x040,
+	TPM2_RC_S		= 0x800,
+	TPM2_RC_1		= 0x100,
+	TPM2_RC_2		= 0x200,
+	TPM2_RC_3		= 0x300,
+	TPM2_RC_4		= 0x400,
+	TPM2_RC_5		= 0x500,
+	TPM2_RC_6		= 0x600,
+	TPM2_RC_7		= 0x700,
+	TPM2_RC_8		= 0x800,
+	TPM2_RC_9		= 0x900,
+	TPM2_RC_A		= 0xa00,
+	TPM2_RC_B		= 0xb00,
+	TPM2_RC_C		= 0xc00,
+	TPM2_RC_D		= 0xd00,
+	TPM2_RC_E		= 0xe00,
+	TPM2_RC_F		= 0xf00,
+	TPM2_RC_N_MASK		= 0xf00,
 };
 
 enum tpm2_algorithms {
@@ -107,19 +230,22 @@ enum tpm2_algorithms {
 };
 
 enum tpm2_command_codes {
-	TPM2_CC_FIRST		= 0x011F,
-	TPM2_CC_SELF_TEST	= 0x0143,
-	TPM2_CC_STARTUP		= 0x0144,
-	TPM2_CC_SHUTDOWN	= 0x0145,
-	TPM2_CC_CREATE		= 0x0153,
-	TPM2_CC_LOAD		= 0x0157,
-	TPM2_CC_UNSEAL		= 0x015E,
-	TPM2_CC_FLUSH_CONTEXT	= 0x0165,
-	TPM2_CC_GET_CAPABILITY	= 0x017A,
-	TPM2_CC_GET_RANDOM	= 0x017B,
-	TPM2_CC_PCR_READ	= 0x017E,
-	TPM2_CC_PCR_EXTEND	= 0x0182,
-	TPM2_CC_LAST		= 0x018F,
+	TPM2_CC_FIRST			= 0x011F,
+	TPM2_CC_FIELD_UPGRADE_DATA	= 0x0141,
+	TPM2_CC_SELF_TEST		= 0x0143,
+	TPM2_CC_STARTUP			= 0x0144,
+	TPM2_CC_SHUTDOWN		= 0x0145,
+	TPM2_CC_CREATE			= 0x0153,
+	TPM2_CC_LOAD			= 0x0157,
+	TPM2_CC_UNSEAL			= 0x015E,
+	TPM2_CC_FLUSH_CONTEXT		= 0x0165,
+	TPM2_CC_GET_CAPABILITY		= 0x017A,
+	TPM2_CC_GET_RANDOM		= 0x017B,
+	TPM2_CC_GET_TEST_RESULT		= 0x017C,
+	TPM2_CC_PCR_READ		= 0x017E,
+	TPM2_CC_POLICY_RESTART		= 0x0180,
+	TPM2_CC_PCR_EXTEND		= 0x0182,
+	TPM2_CC_LAST			= 0x018F,
 };
 
 enum tpm2_permanent_handles {
@@ -376,7 +502,7 @@ typedef union {
 	struct	tpm_pcrextend_in pcrextend_in;
 	struct	tpm_getrandom_in getrandom_in;
 	struct	tpm_getrandom_out getrandom_out;
-	struct tpm_startup_in startup_in;
+	struct	tpm_startup_in startup_in;
 } tpm_cmd_params;
 
 struct tpm_cmd_t {
@@ -386,7 +512,7 @@ struct tpm_cmd_t {
 
 struct tpm2_digest {
 	u16 alg_id;
-	u8 digest[SHA512_DIGEST_SIZE];
+	u8 digest[TPM2_DIGEST_SIZE_MAX];
 } __packed;
 
 /* A string buffer type for constructing TPM commands. This is based on the
@@ -396,6 +522,7 @@ struct tpm2_digest {
 
 enum tpm_buf_flags {
 	TPM_BUF_OVERFLOW	= BIT(0),
+	TPM_BUF_INITIALIZED	= BIT(01),
 };
 
 struct tpm_buf {
@@ -404,22 +531,54 @@ struct tpm_buf {
 	u8 *data;
 };
 
-static inline int tpm_buf_init(struct tpm_buf *buf, u16 tag, u32 ordinal)
+static inline int tpm_buf_init(struct tpm_buf *buf)
 {
-	struct tpm_input_header *head;
-
 	buf->data_page = alloc_page(GFP_HIGHUSER);
 	if (!buf->data_page)
 		return -ENOMEM;
 
-	buf->flags = 0;
+	buf->flags = TPM_BUF_INITIALIZED;
 	buf->data = kmap(buf->data_page);
+
+	return 0;
+}
+
+static inline int tpm_buf_init_req(struct tpm_buf *buf, u16 tag, u32 ordinal)
+{
+	struct tpm_input_header *head;
+
+	if (!(buf->flags & TPM_BUF_INITIALIZED)) {
+		int rc = tpm_buf_init(buf);
+
+		if (rc)
+			return rc;
+	}
 
 	head = (struct tpm_input_header *) buf->data;
 
 	head->tag = cpu_to_be16(tag);
 	head->length = cpu_to_be32(sizeof(*head));
 	head->ordinal = cpu_to_be32(ordinal);
+
+	return 0;
+}
+
+static inline int tpm_buf_init_resp(struct tpm_buf *buf, u16 tag, u32 retcode)
+{
+	struct tpm_output_header *head;
+
+	if (!(buf->flags & TPM_BUF_INITIALIZED)) {
+		int rc = tpm_buf_init(buf);
+
+		if (rc)
+			return rc;
+	}
+
+	head = (struct tpm_output_header *) buf->data;
+
+	head->tag = cpu_to_be16(tag);
+	head->length = cpu_to_be32(sizeof(*head));
+	head->return_code = cpu_to_be32(retcode);
 
 	return 0;
 }
@@ -482,6 +641,46 @@ static inline void tpm_buf_append_u32(struct tpm_buf *buf, const u32 value)
 	__be32 value2 = cpu_to_be32(value);
 
 	tpm_buf_append(buf, (u8 *) &value2, 4);
+}
+
+static inline u8 *tpm_buf_reserve(struct tpm_buf *buf, unsigned int new_len)
+{
+	struct tpm_input_header *head = (struct tpm_input_header *) buf->data;
+	u32 len = tpm_buf_length(buf);
+
+	/* Return silently if overflow has already happened. */
+	if (buf->flags & TPM_BUF_OVERFLOW)
+		return NULL;
+
+	if ((len + new_len) > PAGE_SIZE) {
+		WARN(1, "tpm_buf: overflow\n");
+		buf->flags |= TPM_BUF_OVERFLOW;
+		return NULL;
+	}
+
+	head->length = cpu_to_be32(len + new_len);
+
+	return buf->data + len;
+}
+
+static inline void tpm_buf_memset(struct tpm_buf *buf,
+				  u8 value, unsigned int new_len)
+{
+	struct tpm_input_header *head = (struct tpm_input_header *) buf->data;
+	u32 len = tpm_buf_length(buf);
+
+	/* Return silently if overflow has already happened. */
+	if (buf->flags & TPM_BUF_OVERFLOW)
+		return;
+
+	if ((len + new_len) > PAGE_SIZE) {
+		WARN(1, "tpm_buf: overflow\n");
+		buf->flags |= TPM_BUF_OVERFLOW;
+		return;
+	}
+
+	memset(&buf->data[len], value, new_len);
+	head->length = cpu_to_be32(len + new_len);
 }
 
 extern struct class *tpm_class;
